@@ -1,11 +1,16 @@
 import React, { useState, useContext } from 'react';
 import './App.css';
-import { dummyNotesList } from './constants';
-import ThemeProvider, { ThemeContext } from './themeContext';
+import { ThemeContext } from './themeContext';
+import { Label, Note } from "./types"; // Import the Label type from the appropriate module
+import { dummyNotesList } from "./constants"; // Import the dummyNotesList from the appropriate module
+
+
 
 function App() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const { theme, toggleTheme } = useContext(ThemeContext);
+  const [notes, setNotes] = useState(dummyNotesList);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
 
   const toggleFavorite = (noteTitle: string) => {
     setFavorites((prevFavorites) =>
@@ -15,22 +20,68 @@ function App() {
     );
   };
 
+  
+  const initialNote = {
+     id: -1,
+     title: "",
+     content: "",
+     label: Label.other,
+   };
+  const [createNote, setCreateNote] = useState(initialNote);
+
+   // Function to create a note
+  const createNoteHandler = (event: React.FormEvent) => {
+     event.preventDefault();
+     console.log("title: ", createNote.title);
+     console.log("content: ", createNote.content);
+     createNote.id = notes.length + 1;
+     setNotes([createNote, ...notes]);
+     setCreateNote(initialNote);
+  };
+
+   // Function to update a note
+   const updateNoteHandler = (id: number, field: string, value: string) => {
+    const updatedNotes = notes.map(note => 
+      note.id === id ? { ...note, [field]: value } : note
+    );
+    setNotes(updatedNotes);
+  };
+
+  // Function to delete a note
+  const deleteNoteHandler = (id: number) => {
+    const noteToDelete = notes.find((note) => note.id === id);
+    
+    if (noteToDelete) {
+      setFavorites(favorites.filter((title) => title !== noteToDelete.title));
+    }
+  
+    setNotes(notes.filter((note) => note.id !== id));
+  };
+  
+
   return (
     <div className="app-container" style={{ backgroundColor: theme.background, color: theme.foreground }}>
-      <form className="note-form">
+      <form className="note-form" onSubmit={createNoteHandler}>
         <div>
-          <input placeholder="Note Title"></input>
+          <input placeholder="Note Title" onChange={(event) =>
+          setCreateNote({ ...createNote, title: event.target.value })}
+        	required>
+          </input>
         </div>
         <div>
-          <textarea></textarea>
+          <textarea onChange={(event) =>
+          setCreateNote({ ...createNote, content: event.target.value })}
+        	required>
+          </textarea>
         </div>
         <div>
-          <select name="label" id="label">
-            <option value="">--Please choose an option--</option>
-            <option value="personal">Personal</option>
-            <option value="work">Work</option>
-            <option value="study">Study</option>
-            <option value="other">Other</option>
+          <select name="label" id="label" onChange={(event) =>
+         	setCreateNote({ ...createNote, label: event.target.value as Label })}
+       	  required>
+           <option value={Label.personal}>Personal</option>
+       	   <option value={Label.study}>Study</option>
+       	   <option value={Label.work}>Work</option>
+       	   <option value={Label.other}>Other</option>
           </select>
         </div>
         <div>
@@ -44,7 +95,7 @@ function App() {
       </form>
 
       <div className="notes-grid">
-        {dummyNotesList.map((note) => (
+        {notes.map((note) => (
           <div
             key={note.id}
             className="note-item"
@@ -57,11 +108,31 @@ function App() {
               >
                 {favorites.includes(note.title) ? '❤️' : '🤍'}
               </span>
-              <button>x</button>
+              <button onClick={() => deleteNoteHandler(note.id)}>x</button>
             </div>
-            <h2>{note.title}</h2>
-            <p>{note.content}</p>
-            <p>{note.label}</p>
+            <h2
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => updateNoteHandler(note.id, 'title', e.currentTarget.textContent || '')}
+            >
+              {note.title}
+            </h2>
+            <p
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => updateNoteHandler(note.id, 'content', e.currentTarget.textContent || '')}
+            >
+              {note.content}
+            </p>
+            <select
+              value={note.label}
+              onChange={(e) => updateNoteHandler(note.id, 'label', e.target.value as Label)}
+            >
+              <option value={Label.personal}>Personal</option>
+              <option value={Label.study}>Study</option>
+              <option value={Label.work}>Work</option>
+              <option value={Label.other}>Other</option>
+            </select>
           </div>
         ))}
       </div>
